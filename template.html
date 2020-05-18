@@ -1,0 +1,79 @@
+<html>
+  <head>
+    <meta charset="utf8">
+    <title>Certicate</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Sackers Gothic Std';
+        font-weight: 500;
+        font-size: 16px;
+        background: rgb(241,241,241);
+        -webkit-print-color-adjust: exact;
+        box-sizing: border-box;
+      }
+
+      .page {
+        position: relative;
+        height: 210mm;
+        width: 297mm;
+        display: table;
+        page-break-after: auto;
+        overflow: hidden;
+        margin: auto;
+        border: 15px #0072ce double;
+        box-sizing: border-box;
+      }
+
+      .group {
+        margin-top: 3mm;
+      }
+
+      .line {
+        color: white;
+        position: relative;
+      }
+
+      .center {
+        text-align: center;
+      }
+
+      .logo {
+        position: relative;
+        width: 80%;
+        left: 10%;
+        top: 15%;
+      }
+
+      .cert {
+        width: 100%;
+        height: 100%;
+        text-align: center;
+        background-color: #ddd;
+        display: table-row;
+        vertical-align: middle;
+      }
+      .cert > div {
+        display: table-cell;
+        vertical-align: middle;
+      }
+      .cert span {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="cert">
+        <div>
+          <hr>
+          <span style="font-size:1.5rem;">this certificate is granted to:</span>
+          <span style="font-size:4.2rem;font-style:italic;"><strong>{{ name }}</strong></span>
+          <span style="font-size:1.5rem;">for having successfully completed {{ hours }} hour(s) of the {{ course }} course</span>
+          <hr>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
