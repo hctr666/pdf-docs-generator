@@ -13,7 +13,8 @@
     "del": "^5.1.0",
     "html-pdf": "^2.2.0",
     "slugify": "^1.4.0",
-    "write": "^2.0.0"
+    "write": "^2.0.0",
+    "xlsx": "^0.16.1"
   },
   "devDependencies": {
     "dotenv": "^8.2.0"
