@@ -1,9 +1,6 @@
 const path = require('path'),
      del   = require('del'),
-     xlsx  = require('xlsx'),
-    dotenv = require('dotenv');
-
-dotenv.config();
+     xlsx  = require('xlsx');
 
 // Create a xlsx map file with user info, 
 function createMapFile(data) {
