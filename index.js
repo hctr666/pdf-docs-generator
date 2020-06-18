@@ -26,10 +26,10 @@ function evaluateAnswers(answers = {}) {
   const keys  = Object.keys(answers);
   const total = keys.length;
   const min   = Math.round(total * ( 50 / 100 ));
-  const correct = keys.reduce((acc, k) => {
+  const corrects = keys.reduce((acc, k) => {
     return answersBase[k] === answers[k] ? acc + 1 : acc;
   }, 0);
-  return correct >= min;
+  return corrects >= min;
 }
 
 (async () => {

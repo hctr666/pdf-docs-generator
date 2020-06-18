@@ -27,7 +27,40 @@ function pdfContent(nombres, curso, horas) {
   return template.replace(/\{\{ name \}\}/g, nombres)
     .replace(/\{\{ course \}\}/g, curso)
     .replace(/\{\{ hours \}\}/g, horas)
-} 
+    .replace(/\{\{ style-share \}\}/g, 'style="display:none;"')
+}
+
+function htmlContent(nombres, curso, horas, path, filename) {
+  return template.replace(/\{\{ name \}\}/g, nombres)
+    .replace(/\{\{ html-classname \}\}/g, 'html responsive')
+    .replace(/\{\{ course \}\}/g, curso)
+    .replace(/\{\{ hours \}\}/g, horas)
+    .replace(/\{\{ share-link \}\}/g, `https://www.facebook.com/sharer/sharer.php?u=${path}`)
+    .replace(/\{\{ path \}\}/g, path)
+    .replace(/\{\{ og-image \}\}/g, `${PRD_PATH}html/preview/${filename}.jpg`)
+}
+
+function createHtmlFile(data) {
+  return new Promise((resolve, reject) => {
+    try {
+      const { nombres, curso, horas } = data;
+      const filename = `cert-${slug(curso)}_${slug(nombres)}`
+      const file = `${filename}.html`;
+      console.log('Creating html version...')
+
+      const contentHtml = htmlContent(nombres, curso, horas, `${PRD_PATH}html/${file}`, filename)
+      write(`./output/html/${file}`, contentHtml)
+        .then(() => {
+          console.log(`Created HTML -> ${path.resolve('./output/html/', file)}`);
+          console.log('==========================');
+          return resolve();
+        })
+    } catch (err) {
+      console.error({ data, err })
+      reject(err);
+    }
+  })
+}
 
 // Create pdf files
 function createPdfFile(data) {
@@ -36,21 +69,23 @@ function createPdfFile(data) {
       const { nombres, curso, horas, email } = data;
       const filename = `cert-${slug(curso)}_${slug(nombres)}.pdf`;
   
-      console.log(`Output file: cert-${slug(curso)}_${slug(nombres)}.pdf`);
+      console.log(`Output file: ${filename}`);
       console.log(`Processing content...`);
   
-      addToMapFile({ nombres, email, certUrl: `${PRD_PATH}${filename}` });
+      addToMapFile({ nombres, email, certUrl: `${PRD_PATH}pdf/${filename}` });
   
-      console.log('Generating pdf file...')
-      pdf.create(pdfContent(nombres, curso, horas), pdfOptions)
+      const content = pdfContent(nombres, curso, horas, `${PRD_PATH}pdf/${filename}`)
+
+      console.log('Creating pdf file...')
+      pdf.create(content, pdfOptions)
         .toFile(`./output/pdf/${filename}`, (err, res) => {
           if (err) {
             return reject(err);
           }
-          console.log(`PDF created -> ${res.filename}`);
-          console.log('==========================');
-          return resolve();
+          console.log(`Created PDF -> ${res.filename}`);
+          createHtmlFile(data).then(() => resolve())
         })
+
     } catch (err) {
       console.error({ data, err })
       reject(err);

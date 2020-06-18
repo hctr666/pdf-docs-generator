@@ -1,8 +1,18 @@
-<html>
+<html class="{{ html-classname }}">
   <head>
     <meta charset="utf8">
-    <title>Certicate</title>
+    <title>Certificate</title>
+    <meta property="og:url" content="{{ path }}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Curso de Especialización - Certicicado">
+    <meta property="og:description" content="Certificado del curso de especialización para {{ name }}">
+    <meta property="og:image" content="{{ og-image }}">
+    <meta property="og:site_name" content="SodimacPeru">
     <style>
+      .html body {
+        display: flex;
+        background: #333 !important;
+      }
       html, body {
         margin: 0;
         padding: 0;
@@ -12,6 +22,21 @@
         background: rgb(241,241,241);
         -webkit-print-color-adjust: exact;
         box-sizing: border-box;
+      }
+
+      .fb-share {
+        display: block;
+        padding: 5px;
+        position: absolute;
+        right: 0;
+        bottom: 0;
+      }
+
+      .responsive .page {
+        height: 100%;
+        max-height: 210mm;
+        max-width: 297mm;
+        width: 100%;
       }
 
       .page {
@@ -24,6 +49,7 @@
         margin: auto;
         border: 15px #0072ce double;
         box-sizing: border-box;
+        background: #eee;
       }
 
       .group {
@@ -61,19 +87,60 @@
       .cert span {
         display: block;
       }
+
+      .text-big {
+        font-size:4.2rem;
+        font-style:italic;
+      }
+
+      .text {
+        font-size:1.5rem;
+      }
+      @media (max-width: 991px) {
+        .responsive .text {
+          font-size: 4vmin;
+        }
+        .responsive .text-big {
+          font-size: 10.5vmin;
+          line-height: 13vmin;
+        }
+      }
     </style>
   </head>
   <body>
-    <div class="page">
+    <div id="fb-root"></div>
+    <script>(function(d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+      js = d.createElement(s); js.id = id;
+      js.src = "https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v3.0";
+      fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));</script>
+    <div id="root" class="page">
       <div class="cert">
         <div>
           <hr>
-          <span style="font-size:1.5rem;">this certificate is granted to:</span>
-          <span style="font-size:4.2rem;font-style:italic;"><strong>{{ name }}</strong></span>
-          <span style="font-size:1.5rem;">for having successfully completed {{ hours }} hour(s) of the {{ course }} course</span>
+          <span class="text">this certificate is granted to:</span>
+          <span class="text-big"><strong>{{ name }}</strong></span>
+          <span class="text">for having successfully completed {{ hours }} hour(s) of the {{ course }} course</span>
           <hr>
+          <a id="fb-share-link" href="{{ share-link }}" class="fb-share" {{ style-share }} >Compartir</a>
         </div>
       </div>
     </div>
+    <script>
+      (function(d, w){
+        var shareLink = d.getElementById('fb-share-link'),
+                 root = d.getElementById('root');
+        if (shareLink) {
+          shareLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            w.open(shareLink.href, 'Publicar en Facebook', 'width=500,height=500')
+          })
+        }
+
+        root.setAttribute('style', 'height:' + w.innerHeight + 'px')
+      })(document, window);
+    </script>
   </body>
 </html>
