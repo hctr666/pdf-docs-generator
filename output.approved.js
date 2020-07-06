@@ -1,11 +1,14 @@
-const fs = require('fs'),
-   path  = require('path'),
-   del   = require('del'),
-   write = require('write'),
-   pdf   = require('html-pdf'),
-   slug  = require('slugify'),
-   xlsx  = require('xlsx'),
-  dotenv = require('dotenv');
+const fs  = require('fs'),
+   path   = require('path'),
+   del    = require('del'),
+   write  = require('write'),
+   pdf    = require('html-pdf'),
+   slug   = require('slugify'),
+   xlsx   = require('xlsx'),
+  dotenv  = require('dotenv'),
+nodeHtmlToImage = require('node-html-to-image');
+
+const puppeteer = require('puppeteer');
 
 dotenv.config();
 
@@ -16,18 +19,22 @@ const mapFile = [];
 const addToMapFile = (item) => mapFile.push(item);
 
 const pdfOptions = {
-  format: 'A4',
-  orientation: 'landscape',
-  border: '0'
+  //format: 'A4',
+  width: '210mm',
+  height: '185mm',
+  //orientation: 'landscape',
+  //border: '0'
 }
 
 const template = fs.readFileSync(path.resolve('./template.html'), { encoding: 'utf-8' });
 
 function pdfContent(nombres, curso, horas) {
   return template.replace(/\{\{ name \}\}/g, nombres)
+    .replace(/\{\{ html-classname \}\}/g, 'pdf')
     .replace(/\{\{ course \}\}/g, curso)
     .replace(/\{\{ hours \}\}/g, horas)
     .replace(/\{\{ style-share \}\}/g, 'style="display:none;"')
+    .replace(/<\/style>/g, '.page{height:100vh !important;}</style>')
 }
 
 function htmlContent(nombres, curso, horas, path, filename) {
@@ -35,12 +42,14 @@ function htmlContent(nombres, curso, horas, path, filename) {
     .replace(/\{\{ html-classname \}\}/g, 'html responsive')
     .replace(/\{\{ course \}\}/g, curso)
     .replace(/\{\{ hours \}\}/g, horas)
-    .replace(/\{\{ share-link \}\}/g, `https://www.facebook.com/sharer/sharer.php?u=${path}`)
+    .replace(/\{\{ fb-share-link \}\}/g, `https://www.facebook.com/sharer/sharer.php?u=${path}`)
+    .replace(/\{\{ li-share-link \}\}/g, `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(path)}`)
+    .replace(/\{\{ wa-share-link \}\}/g, `https://wa.me/?text=${encodeURIComponent(path)}`)
     .replace(/\{\{ path \}\}/g, path)
-    .replace(/\{\{ og-image \}\}/g, `${PRD_PATH}html/preview/${filename}.jpg`)
+    .replace(/\{\{ og-image \}\}/g, `${PRD_PATH}previews/${filename}.jpg`)
 }
 
-function createHtmlFile(data) {
+function createHtmlFile (data) {
   return new Promise((resolve, reject) => {
     try {
       const { nombres, curso, horas } = data;
@@ -52,8 +61,7 @@ function createHtmlFile(data) {
       write(`./output/html/${file}`, contentHtml)
         .then(() => {
           console.log(`Created HTML -> ${path.resolve('./output/html/', file)}`);
-          console.log('==========================');
-          return resolve();
+          return resolve(path.resolve('./output/html/', file));
         })
     } catch (err) {
       console.error({ data, err })
@@ -62,9 +70,26 @@ function createHtmlFile(data) {
   })
 }
 
+async function createSharePreview (input, output) {
+  try {
+    let html = fs.readFileSync(input, { encoding: 'utf-8' })
+  
+    const browser = await puppeteer.launch()
+    const page = await browser.newPage()
+             
+    await page.setViewport({ width: 315, height: 315 })
+    await page.setContent(html)
+    await page.screenshot({ path: output })
+    await browser.close()
+
+  } catch(err) {
+    console.error({ input, err })
+  }
+}
+
 // Create pdf files
-function createPdfFile(data) {
-  return new Promise((resolve, reject) => {
+async function createPdfFile (data) {
+  //return new Promise((resolve, reject) => {
     try {
       const { nombres, curso, horas, email } = data;
       const filename = `cert-${slug(curso)}_${slug(nombres)}.pdf`;
@@ -77,20 +102,21 @@ function createPdfFile(data) {
       const content = pdfContent(nombres, curso, horas, `${PRD_PATH}pdf/${filename}`)
 
       console.log('Creating pdf file...')
-      pdf.create(content, pdfOptions)
-        .toFile(`./output/pdf/${filename}`, (err, res) => {
-          if (err) {
-            return reject(err);
-          }
-          console.log(`Created PDF -> ${res.filename}`);
-          createHtmlFile(data).then(() => resolve())
-        })
+
+      const browser = await puppeteer.launch()
+      const page = await browser.newPage()
+      await page.setContent(content)
+      await page.pdf({ path: `./output/pdf/${filename}`, ...pdfOptions })
+
+      console.log(`Created pdf -> ${path.resolve('./', `output/pdf/${filename}`)}`)
+
+      await browser.close()
 
     } catch (err) {
       console.error({ data, err })
-      reject(err);
+      //reject(err);
     }
-  })
+  //})
 }
 
 // Create a xlsx map file with pdf info, 
@@ -104,28 +130,46 @@ function createMapFile(data) {
   console.log(`Map file for approved created -> ${filename}`);
 }
 
-module.exports = async (data = []) => {
-  // Delete output directory
-  await fs.exists(path.resolve('./', 'output'), async (exists) => {
-    if (exists) {
-      await del('./output/*').then(() => {
-        console.log('Deleted output directory.')
-        console.log('...');
-      });
-    } else {
-      await fs.mkdirSync('./output/');
-    }
-  });
+// Clean output directory
+function cleanOutput () {
+  return del('./output')
+    .then(() => {
+      console.log('Clean output directory')
+      console.log('...')
+      fs.mkdirSync('./output/pdf/', { recursive: true })
+    })
+    .catch(() => console.error('Error trying to clean output'))
+}
 
-  const creators = [];
+module.exports = async (data = []) => {
+
+  await cleanOutput()
+
+  const pdfCreators = [];
+  const htmlCreators = [];
+  const previewCreators = [];
   const len = data.length;
   let i = len;
 
   while(i--) {
-    creators.push(createPdfFile(data[i]))
+    await pdfCreators.push(createPdfFile(data[i]));
+    htmlCreators.push(createHtmlFile(data[i]));
+    //previewCreators.push(createSharePreview())
   }
-  
-  await Promise.all(creators)
+
+  await Promise.all(pdfCreators)
     .then(() => createMapFile(mapFile))
     .catch(err => console.error(err))
+  
+
+  await Promise.all(htmlCreators)
+    .then((res) => {
+      fs.mkdirSync('./output/previews')
+      return Promise.all(
+        res.map(htmlFile => createSharePreview(
+          htmlFile, htmlFile.replace(/\.html/g, '.jpg').replace(/\\html/g, '\\previews'))
+        )
+      )
+    })
+    .catch((err) => console.error(err))
 };

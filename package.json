@@ -12,6 +12,8 @@
     "csv-parser": "^2.3.2",
     "del": "^5.1.0",
     "html-pdf": "^2.2.0",
+    "node-html-to-image": "^2.1.1",
+    "puppeteer": "^5.0.0",
     "slugify": "^1.4.0",
     "write": "^2.0.0",
     "xlsx": "^0.16.1"
