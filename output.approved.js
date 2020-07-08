@@ -2,21 +2,21 @@ const fs  = require('fs'),
    path   = require('path'),
    del    = require('del'),
    write  = require('write'),
-   pdf    = require('html-pdf'),
    slug   = require('slugify'),
    xlsx   = require('xlsx'),
   dotenv  = require('dotenv'),
-nodeHtmlToImage = require('node-html-to-image');
-
-const puppeteer = require('puppeteer');
+  puppeteer = require('puppeteer'),
+  moment = require('moment-timezone');
 
 dotenv.config();
+
+// moment config
+moment.tz.setDefault('America/Lima');
+moment.locale('es');
 
 const { PRD_PATH } = process.env
 
 const mapFile = [];
-
-const addToMapFile = (item) => mapFile.push(item);
 
 const pdfOptions = {
   //format: 'A4',
@@ -28,20 +28,28 @@ const pdfOptions = {
 
 const template = fs.readFileSync(path.resolve('./template.html'), { encoding: 'utf-8' });
 
-function pdfContent(nombres, curso, horas) {
+function pdfContent(data) {
+  const { nombres, curso, horas } = data
+  const date = moment().format('D [de] MMMM [del] YYYY')
+
   return template.replace(/\{\{ name \}\}/g, nombres)
     .replace(/\{\{ html-classname \}\}/g, 'pdf')
     .replace(/\{\{ course \}\}/g, curso)
     .replace(/\{\{ hours \}\}/g, horas)
+    .replace(/\{\{ date \}\}/g, date)
     .replace(/\{\{ style-share \}\}/g, 'style="display:none;"')
     .replace(/<\/style>/g, '.page{height:100vh !important;}</style>')
 }
 
-function htmlContent(nombres, curso, horas, path, filename) {
+function htmlContent(data) {
+  const { nombres, curso, horas, path, filename } = data
+  const date = moment().format('D [de] MMMM [del] YYYY')
+  
   return template.replace(/\{\{ name \}\}/g, nombres)
     .replace(/\{\{ html-classname \}\}/g, 'html responsive')
     .replace(/\{\{ course \}\}/g, curso)
     .replace(/\{\{ hours \}\}/g, horas)
+    .replace(/\{\{ date \}\}/g, date)
     .replace(/\{\{ fb-share-link \}\}/g, `https://www.facebook.com/sharer/sharer.php?u=${path}`)
     .replace(/\{\{ li-share-link \}\}/g, `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(path)}`)
     .replace(/\{\{ wa-share-link \}\}/g, `https://wa.me/?text=${encodeURIComponent(path)}`)
@@ -49,15 +57,25 @@ function htmlContent(nombres, curso, horas, path, filename) {
     .replace(/\{\{ og-image \}\}/g, `${PRD_PATH}previews/${filename}.jpg`)
 }
 
+function addToMapFile (data) {
+  const { nombres, marca, email } = data;
+  const pdf  = `${PRD_PATH}pdf/cc_${slug(nombres)}.pdf`
+  const html = `${PRD_PATH}html/cc_${slug(nombres)}.html`
+
+  mapFile.push({ nombres, email, pdf, html, marca })
+}
+
+
 function createHtmlFile (data) {
   return new Promise((resolve, reject) => {
     try {
       const { nombres, curso, horas } = data;
-      const filename = `cert-${slug(curso)}_${slug(nombres)}`
+      const filename = `cc_${slug(nombres)}`
       const file = `${filename}.html`;
       console.log('Creating html version...')
 
-      const contentHtml = htmlContent(nombres, curso, horas, `${PRD_PATH}html/${file}`, filename)
+      const htmlData = { nombres, curso, horas, path: `${PRD_PATH}html/${file}`, filename: filename }
+      const contentHtml = htmlContent(htmlData)
       write(`./output/html/${file}`, contentHtml)
         .then(() => {
           console.log(`Created HTML -> ${path.resolve('./output/html/', file)}`);
@@ -73,6 +91,8 @@ function createHtmlFile (data) {
 async function createSharePreview (input, output) {
   try {
     let html = fs.readFileSync(input, { encoding: 'utf-8' })
+    html = html.replace(/<html class="*"/g, '<html class="preview"')
+      .replace(/<head>/g, '<head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">')
   
     const browser = await puppeteer.launch()
     const page = await browser.newPage()
@@ -91,24 +111,23 @@ async function createSharePreview (input, output) {
 async function createPdfFile (data) {
   //return new Promise((resolve, reject) => {
     try {
-      const { nombres, curso, horas, email } = data;
-      const filename = `cert-${slug(curso)}_${slug(nombres)}.pdf`;
+      const { nombres, curso, horas } = data;
+      const filename = `cc_${slug(nombres)}`;
   
-      console.log(`Output file: ${filename}`);
+      console.log(`Output file: ${filename}.pdf`);
       console.log(`Processing content...`);
-  
-      addToMapFile({ nombres, email, certUrl: `${PRD_PATH}pdf/${filename}` });
-  
-      const content = pdfContent(nombres, curso, horas, `${PRD_PATH}pdf/${filename}`)
+    
+      const pdfData = { nombres, curso, horas, filename: `${PRD_PATH}pdf/${filename}.pdf` }
+      const content = pdfContent(pdfData)
 
       console.log('Creating pdf file...')
 
       const browser = await puppeteer.launch()
       const page = await browser.newPage()
       await page.setContent(content)
-      await page.pdf({ path: `./output/pdf/${filename}`, ...pdfOptions })
+      await page.pdf({ path: `./output/pdf/${filename}.pdf`, ...pdfOptions })
 
-      console.log(`Created pdf -> ${path.resolve('./', `output/pdf/${filename}`)}`)
+      console.log(`Created pdf -> ${path.resolve('./', `output/pdf/${filename}.pdf`)}`)
 
       await browser.close()
 
@@ -147,14 +166,13 @@ module.exports = async (data = []) => {
 
   const pdfCreators = [];
   const htmlCreators = [];
-  const previewCreators = [];
   const len = data.length;
   let i = len;
 
   while(i--) {
+    addToMapFile(data[i])
     await pdfCreators.push(createPdfFile(data[i]));
     htmlCreators.push(createHtmlFile(data[i]));
-    //previewCreators.push(createSharePreview())
   }
 
   await Promise.all(pdfCreators)
