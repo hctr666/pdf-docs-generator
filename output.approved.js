@@ -2,11 +2,12 @@ const fs  = require('fs'),
    path   = require('path'),
    del    = require('del'),
    write  = require('write'),
-   slug   = require('slugify'),
    xlsx   = require('xlsx'),
   dotenv  = require('dotenv'),
   puppeteer = require('puppeteer'),
   moment = require('moment-timezone');
+
+const { slug } = require('./utils');
 
 dotenv.config();
 
@@ -29,52 +30,51 @@ const pdfOptions = {
 const template = fs.readFileSync(path.resolve('./template.html'), { encoding: 'utf-8' });
 
 function pdfContent(data) {
-  const { nombres, curso, horas } = data
+  const { nombres } = data
   const date = moment().format('D [de] MMMM [del] YYYY')
 
   return template.replace(/\{\{ name \}\}/g, nombres)
     .replace(/\{\{ html-classname \}\}/g, 'pdf')
-    .replace(/\{\{ course \}\}/g, curso)
-    .replace(/\{\{ hours \}\}/g, horas)
     .replace(/\{\{ date \}\}/g, date)
     .replace(/\{\{ style-share \}\}/g, 'style="display:none;"')
     .replace(/<\/style>/g, '.page{height:100vh !important;}</style>')
 }
 
 function htmlContent(data) {
-  const { nombres, curso, horas, path, filename } = data
+  const { nombres, path, filename } = data
   const date = moment().format('D [de] MMMM [del] YYYY')
   
   return template.replace(/\{\{ name \}\}/g, nombres)
     .replace(/\{\{ html-classname \}\}/g, 'html responsive')
-    .replace(/\{\{ course \}\}/g, curso)
-    .replace(/\{\{ hours \}\}/g, horas)
     .replace(/\{\{ date \}\}/g, date)
     .replace(/\{\{ fb-share-link \}\}/g, `https://www.facebook.com/sharer/sharer.php?u=${path}`)
     .replace(/\{\{ li-share-link \}\}/g, `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(path)}`)
     .replace(/\{\{ wa-share-link \}\}/g, `https://wa.me/?text=${encodeURIComponent(path)}`)
     .replace(/\{\{ path \}\}/g, path)
+    .replace(/\{\{ download-filename \}\}/g, filename)
+    .replace(/\{\{ pdf-path \}\}/g, `${PRD_PATH}pdf/${filename}.pdf`)
     .replace(/\{\{ og-image \}\}/g, `${PRD_PATH}previews/${filename}.jpg`)
 }
 
 function addToMapFile (data) {
-  const { nombres, marca, email } = data;
-  const pdf  = `${PRD_PATH}pdf/cc_${slug(nombres)}.pdf`
-  const html = `${PRD_PATH}html/cc_${slug(nombres)}.html`
+  const { nombres, apellidos, especialidad, correoelectronico2 } = data;
+  const sluggedFullName = slug(`${nombres}_${apellidos}`, { remove: 'undefined', replacement: '_' })
+  const pdf  = `${PRD_PATH}pdf/cc_${sluggedFullName}.pdf`
+  const html = `${PRD_PATH}html/cc_${sluggedFullName}.html`
 
-  mapFile.push({ nombres, email, pdf, html, marca })
+  mapFile.push({ nombres, apellidos, correoelectronico2, pdf, html, especialidad })
 }
 
 
 function createHtmlFile (data) {
   return new Promise((resolve, reject) => {
     try {
-      const { nombres, curso, horas } = data;
-      const filename = `cc_${slug(nombres)}`
+      const { nombres, apellidos } = data;
+      const filename = `cc_${slug(`${nombres}_${apellidos}`)}`
       const file = `${filename}.html`;
       console.log('Creating html version...')
 
-      const htmlData = { nombres, curso, horas, path: `${PRD_PATH}html/${file}`, filename: filename }
+      const htmlData = { nombres: `${nombres} ${apellidos}`, path: `${PRD_PATH}html/${file}`, filename: filename }
       const contentHtml = htmlContent(htmlData)
       write(`./output/html/${file}`, contentHtml)
         .then(() => {
@@ -111,13 +111,13 @@ async function createSharePreview (input, output) {
 async function createPdfFile (data) {
   //return new Promise((resolve, reject) => {
     try {
-      const { nombres, curso, horas } = data;
-      const filename = `cc_${slug(nombres)}`;
+      const { nombres, apellidos } = data;
+      const filename = `cc_${slug(`${nombres}_${apellidos}`)}`
   
       console.log(`Output file: ${filename}.pdf`);
       console.log(`Processing content...`);
     
-      const pdfData = { nombres, curso, horas, filename: `${PRD_PATH}pdf/${filename}.pdf` }
+      const pdfData = { nombres: `${nombres} ${apellidos}`, filename: `${PRD_PATH}pdf/${filename}.pdf` }
       const content = pdfContent(pdfData)
 
       console.log('Creating pdf file...')

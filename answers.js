@@ -1,4 +1,4 @@
-const slug = require('slugify');
+const { slug } = require('./utils');
 const data = require('./answers.json');
 
 const parse = (data) => {

@@ -75,6 +75,10 @@
         text-decoration: none;
       }
 
+      .share-link-default {
+        background: #000;
+      }
+
       .share-link-wa {
         background: #07bc4c;
       }
@@ -262,7 +266,7 @@
         margin-bottom: 3px;
       }
       .preview .text-big {
-        font-size: 19px;
+        font-size: 17px;
         line-height: 18px;
       }
 
@@ -344,24 +348,38 @@
         </div>
       </div>
       <div class="shares">
-        <a id="fb-share-link" data-title="Publicar en Facebook" href="{{ fb-share-link }}" class="share-link share-link-fb" {{ style-share }}><i class="fa fa-facebook"></i></a>
-        <a id="li-share-link" data-title="Publicar en Linkedin" href="{{ li-share-link }}" class="share-link share-link-in" {{ style-share }}><i class="fa fa-linkedin"></i></a>
-        <a href="{{ wa-share-link }}" title="Compartir por Whatsapp" class="share-link share-link-wa" {{ style-share }}><i class="fa fa-whatsapp"></i></a>
+        <a id="fb-share-link" data-title="Publicar en Facebook" href="{{ fb-share-link }}" class="share-link js-share-link share-link-fb" {{ style-share }}><i class="fa fa-facebook"></i></a>
+        <a id="li-share-link" data-title="Publicar en Linkedin" href="{{ li-share-link }}" class="share-link js-share-link share-link-in" {{ style-share }}><i class="fa fa-linkedin"></i></a>
+        <a href="{{ wa-share-link }}" title="Compartir por Whatsapp" class="share-link js-share-link share-link-wa" {{ style-share }}><i class="fa fa-whatsapp"></i></a>
+        <a href="{{ pdf-path }}" title="Descargar en PDF" target="_blank" download="{{ download-filename }}" class="share-link js-link-download share-link-default" {{ style-share }}><i class="fa fa-download"></i></a>
       </div>
+    </div>
+    <div>
+      <form  id="form-download" method="get" action="{{ pdf-path }}"></form>
     </div>
     <script>
       (function(d, w){
         
         if (d.documentElement.className.indexOf('pdf') !== -1) return
         
-        var shareLinks = d.querySelectorAll('.share-link'),
-                 root = d.getElementById('root');
+        var shareLinks = d.querySelectorAll('.js-share-link'),
+                 root = d.getElementById('root'),
+         downloadLink = d.querySelector('.js-link-download'),
+         formDownload = d.getElementById('form-download');
+
         [].forEach.call(shareLinks, function (shareLink) {
           shareLink.addEventListener('click', function(e) {
             e.preventDefault();
             w.open(shareLink.href, shareLink.dataset.title, 'width=500,height=500');
           })
         })
+
+        if (formDownload && downloadLink) {
+          //downloadLink.addEventListener('click', function (e) {
+            //e.preventDefault();
+            //formDownload.submit();
+          //})
+        }
 
         //root.setAttribute('style', 'height:' + w.innerHeight + 'px')
       })(document, window);

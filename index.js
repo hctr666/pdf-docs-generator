@@ -1,7 +1,7 @@
 const path = require('path');
-const slug = require('slugify');
 const dotenv = require('dotenv');
 const xlsx = require('xlsx');
+const { slug } = require('./utils');
 const outputApproved = require('./output.approved');
 const outputDisapproved = require('./output.disapproved');
 
@@ -9,19 +9,20 @@ dotenv.config();
 
 const answersBase = require('./answers');
 
-const collectedWb   = xlsx.readFile(path.resolve('./', 'collected.xlsx'));
+const collectedWb   = xlsx.readFile(path.resolve('./', 'DEMUESTRA TUS CONOCIMIENTOS Y CONSTRUYE SEGURIDAD(1-4).xlsx'));
 const collectedData = xlsx.utils.sheet_to_json(collectedWb.Sheets[collectedWb.SheetNames[0]]);
 
-function extractAnswers(item) {
-  return Object.keys(item).reduce((acc, k) => {
+function getFormattedRowData(rowData = []) {
+  return Object.keys(rowData).reduce((acc, k) => {
     const sluggedKey = slug(k);
-    if (typeof answersBase[sluggedKey] !== "undefined") {
-      return Object.assign({}, acc, {[sluggedKey]: item[k]});
-    }
-    return acc;
-  }, {});
+    console.log(sluggedKey)
+    return typeof answersBase[sluggedKey] !== "undefined" ?
+            { ...acc, answers: { [sluggedKey]: rowData[k] }} :
+            { ...acc, [sluggedKey]: rowData[k] }
+  }, { answers: {} });
 }
 
+// Validate answers and determine if is enough to approve
 function evaluateAnswers(answers = {}) {
   const keys = Object.keys(answers);
   const min  = Math.round(keys.length * ( 50 / 100 ));
@@ -35,13 +36,13 @@ function evaluateAnswers(answers = {}) {
   const disapproved = [];
 
   if (collectedData.length) {
-    const approved = collectedData.reduce((acc, item) => {
-      const answers = extractAnswers(item);
-      if (!evaluateAnswers(answers)) {
-        disapproved.push(item);
+    const approved = collectedData.reduce((acc, rowData) => {
+      const fRowData = getFormattedRowData(rowData);
+      if (!evaluateAnswers(fRowData.answers)) {
+        disapproved.push(fRowData);
         return acc;
       }
-      return acc.concat(item);
+      return acc.concat(fRowData);
     }, []);
 
     await outputApproved(approved);
