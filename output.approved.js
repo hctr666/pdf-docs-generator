@@ -138,8 +138,20 @@ async function createPdfFile (data) {
   //})
 }
 
+// Map file output data only with useful props
+function createMapFileData(data) {
+  return data.reduce((acc, { nombres, apellidos, correoelectronico2, html }) => {
+    return acc.concat({
+      'NOMBRE': `${nombres} ${apellidos}`,
+      'CORREO': correoelectronico2,
+      'ENLACE': html
+    })
+  }, [])
+}
+
 // Create a xlsx map file with pdf info, 
-function createMapFile(data) {
+function createMapFile(data = []) {
+  console.table(createMapFileData(data))
   console.log('Creating map file for approved...');
   const sheet = xlsx.utils.json_to_sheet(data);
   const wb = xlsx.utils.book_new();

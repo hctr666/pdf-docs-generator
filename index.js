@@ -15,7 +15,6 @@ const collectedData = xlsx.utils.sheet_to_json(collectedWb.Sheets[collectedWb.Sh
 function getFormattedRowData(rowData = []) {
   return Object.keys(rowData).reduce((acc, k) => {
     const sluggedKey = slug(k);
-    console.log(sluggedKey)
     return typeof answersBase[sluggedKey] !== "undefined" ?
             { ...acc, answers: { [sluggedKey]: rowData[k] }} :
             { ...acc, [sluggedKey]: rowData[k] }
